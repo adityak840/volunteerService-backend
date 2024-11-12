@@ -16,15 +16,15 @@ type Volunteer struct {
 }
 
 type Todo struct {
-	ID               string    `json:"id,omitempty" bson:"_id,omitempty"`
-	Task             string    `json:"task,omitempty" bson:"task,omitempty"`
-	Description      string    `json:"description,omitempty" bson:"description,omitempty"`
-	OrganisationName string    `json:"orgName,omitempty" bson:"orgName,omitempty"`
-	VolunteerType    string    `json:"volType,omitempty" bson:"volType,omitempty"`
-	OrganisationType string    `json:"orgType,omitempty" bson:"orgType,omitempty"`
-	Completed        bool      `json:"completed" bson:"completed"`
-	Time             time.Time `json:"time,omitempty" bson:"time,omitempty"`
-	Volunteer        Volunteer `json:"volunteer,omitempty" bson:"volunteer,omitempty"` // Nested Volunteer struct
+	ID               string      `json:"id,omitempty" bson:"_id,omitempty"`
+	Task             string      `json:"task,omitempty" bson:"task,omitempty"`
+	Description      string      `json:"description,omitempty" bson:"description,omitempty"`
+	OrganisationName string      `json:"orgName,omitempty" bson:"orgName,omitempty"`
+	VolunteerType    string      `json:"volType,omitempty" bson:"volType,omitempty"`
+	OrganisationType string      `json:"orgType,omitempty" bson:"orgType,omitempty"`
+	Completed        bool        `json:"completed" bson:"completed"`
+	Time             time.Time   `json:"time,omitempty" bson:"time,omitempty"`
+	Volunteer        []Volunteer `json:"volunteer,omitempty" bson:"volunteer,omitempty"` // Nested Volunteer struct
 }
 
 var client *mongo.Client
@@ -90,6 +90,9 @@ func (t *Todo) InsertTodo(entry Todo) error {
 		entry.Time = time.Now()
 	}
 
+	// Ensure the Volunteer field is not carrying over from previous operations
+	entry.Volunteer = nil
+
 	// Insert the entire 'entry' object as it contains all fields
 	_, err := collection.InsertOne(context.TODO(), entry)
 	if err != nil {
@@ -100,19 +103,21 @@ func (t *Todo) InsertTodo(entry Todo) error {
 	return nil
 }
 
-// UpdateTodo updates a todo by its ID
 func (t *Todo) UpdateTodo(id string, entry Todo) (*mongo.UpdateResult, error) {
 	collection := returnCollectionPointer("todos")
 	mongoID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
+	log.Println(entry)
 
 	update := bson.D{
 		{"$set", bson.D{
 			{"task", entry.Task},
 			{"completed", entry.Completed},
-			{"volunteer", entry.Volunteer}, // Update the volunteer as well
+		}},
+		{"$push", bson.D{
+			{"volunteer", bson.M{"$each": entry.Volunteer}}, // Append the new volunteers to the array
 		}},
 	}
 

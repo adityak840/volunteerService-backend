@@ -27,6 +27,7 @@ type User struct {
 	UserType         string `json:"userType,omitempty" bson:"userType,omitempty"`
 	VolunteerType    string `json:"volType,omitempty" bson:"volType,omitempty"`
 	OrganisationName string `json:"orgName" bson:"orgName"`
+	OrganisationType string `json:"orgType" bson:"orgType"`
 }
 
 // JWT secret key used for signing JWT tokens (should be stored in environment variable in production)
@@ -124,6 +125,8 @@ func Login(w http.ResponseWriter, email, password string) (string, error) {
 		ContactNumber string `json:"contactNo"`
 		Email         string `json:"email"`
 		OrgName       string `json:"orgName"`
+		OrgType       string `json:"orgType"`
+		VolType       string `json:"volType"`
 	}{
 		UserType:      user.UserType,
 		ID:            user.ID,
@@ -132,6 +135,8 @@ func Login(w http.ResponseWriter, email, password string) (string, error) {
 		ContactNumber: user.ContactNumber,
 		Email:         user.Email,
 		OrgName:       user.OrganisationName,
+		OrgType:       user.OrganisationType,
+		VolType:       user.VolunteerType,
 	}
 
 	// Send the userType as part of the response
