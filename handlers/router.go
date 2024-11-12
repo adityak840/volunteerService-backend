@@ -33,6 +33,7 @@ func CreateRouter() *chi.Mux {
 			router.Delete("/todos/delete/{id}", deleteTodo)
 			router.Post("/signup", SignupHandler)
 			router.Post("/login", LoginHandler)
+			router.Get("/users", GetUserByIDHandler)
 
 		})
 

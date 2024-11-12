@@ -10,13 +10,17 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // User struct for storing user data
 type User struct {
 	ID               string `json:"id,omitempty" bson:"_id,omitempty"`
+	FirstName        string `json:"firstName,omitempty" bson:"firstName,omitempty"`
+	LastName         string `json:"lastName,omitempty" bson:"lastName,omitempty"`
 	Email            string `json:"email,omitempty" bson:"email,omitempty"`
 	Password         string `json:"password,omitempty" bson:"password,omitempty"`
 	ContactNumber    string `json:"contactNo,omitempty" bson:"contactNo,omitempty"`
@@ -113,9 +117,21 @@ func Login(w http.ResponseWriter, email, password string) (string, error) {
 
 	// Return the userType as JSON response
 	response := struct {
-		UserType string `json:"userType"`
+		UserType      string `json:"userType"`
+		ID            string `json:"ID"`
+		FirstName     string `json:"firstName"`
+		LastName      string `json:"lastName"`
+		ContactNumber string `json:"contactNo"`
+		Email         string `json:"email"`
+		OrgName       string `json:"orgName"`
 	}{
-		UserType: user.UserType,
+		UserType:      user.UserType,
+		ID:            user.ID,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		ContactNumber: user.ContactNumber,
+		Email:         user.Email,
+		OrgName:       user.OrganisationName,
 	}
 
 	// Send the userType as part of the response
@@ -149,4 +165,44 @@ func generateJWT(email string) (string, error) {
 	}
 
 	return signedToken, nil
+}
+
+// GetUsersByID retrieves user details by multiple IDs
+func GetUsersByID(ids []string) ([]User, error) {
+	collection := returnCollectionPointer("users")
+	var users []User
+	// Convert string slice to BSON array of ObjectIDs
+	var objectIDs []primitive.ObjectID
+	for _, id := range ids {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			log.Println("Invalid ID format:", id)
+			return nil, fmt.Errorf("invalid ID format: %s", id)
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+	// Query to find all users with the given IDs
+	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
+	cursor, err := collection.Find(context.TODO(), filter, options.Find())
+	if err != nil {
+		log.Println("Error finding users:", err)
+		return nil, err
+	}
+	// Iterate through the cursor and decode each user
+	for cursor.Next(context.TODO()) {
+		var user User
+		err := cursor.Decode(&user)
+		if err != nil {
+			log.Println("Error decoding user:", err)
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	if err := cursor.Err(); err != nil {
+		log.Println("Cursor error:", err)
+		return nil, err
+	}
+	// Close the cursor once finished
+	cursor.Close(context.TODO())
+	return users, nil
 }

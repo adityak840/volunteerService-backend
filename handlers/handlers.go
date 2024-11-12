@@ -284,7 +284,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
-		http.Error(w, "Error encoding JSON response", http.StatusInternalServerError)
+		sendErrorResponse(w, "Error encoding JSON response", http.StatusInternalServerError)
 	}
 }
 
@@ -305,7 +305,29 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Call the Login function
 	_, err = services.Login(w, loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		sendErrorResponse(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+}
+
+func sendErrorResponse(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
+	ids := r.URL.Query()["id"]
+	if len(ids) == 0 {
+		sendErrorResponse(w, "Missing 'id' query parameter", http.StatusBadRequest)
+		return
+	}
+	users, err := services.GetUsersByID(ids)
+	if err != nil {
+		sendErrorResponse(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(users)
 }
